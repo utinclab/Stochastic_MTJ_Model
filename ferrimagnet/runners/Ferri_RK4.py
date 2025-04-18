@@ -19,39 +19,18 @@ t_end = steps * dt
 t_span = (t_start, t_end)
 t_eval = np.linspace(t_start, t_end, steps + 1)
 
-
-params_prec = {
-    'gamma': 1.76e11, # Use NEGATIVE value for electrons
-    'alpha': 0.0,      # No damping
-    'M_s': 1e6,        # Need Ms for potential future terms, but not used here
-    'H_ext': [0.0, 0.0, 10000.0], # Field along +Z (A/m)
-    # All other fields default to off (K_u=None, N_d=None, J=0)
-}
-llg_prec = NormalLLG(**params_prec)
-m0_prec = np.array([1.0, 0.0, 0.0]) # Start on X-axis
-
-params_damp = {
-    'gamma': 1.76e11, 
-    'alpha': 0.1,      # Add moderate damping
-    'M_s': 1e6,        
-    'H_ext': [0.0, 0.0, 10000.0], # Field along +Z
-}
-llg_damp = NormalLLG(**params_damp)
-m0_damp = np.array([0.5, 0.0, np.sqrt(1-0.5**2)]) # Start slightly off Z-axis
-
-params_aniso = {
-    'gamma': 1.76e11, 
-    'alpha': 0.05,     # Small damping for relaxation
-    'M_s': 1e6,        
-    'H_ext': None,     # No external field
-    'K_u': 2e4,        # Anisotropy constant (J/m^3), positive -> easy axis
-    'easy_axis': [0.0, 0.0, 1.0], # Easy axis along +Z
-}
-llg_aniso = NormalLLG(**params_aniso)
+ferri = ferrimagnetic_device(**GdFeCo_MTJ)
 m0_aniso = np.array([0.4, 0.1, np.sqrt(1-0.4**2-0.1**2)]) # Start at arbitrary angle
 
-m0 = random_initial_magnetization() # Initial condition (unit vector)
-ode_func = llg_aniso.llg
+damp = ferrimagnetic_device(**pure_damp)
+m0_damp = np.array([0.4, 0.1, np.sqrt(1-0.4**2-0.1**2)]) # Start at arbitrary angle
+
+m0_random = random_initial_magnetization() # Initial condition (unit vector)
+
+
+
+m0 = m0_random # Choose between m0_aniso or m0_random
+ode_func = ferri.ferri_LLG # Define the ODE function
 
 print("Starting ODE integration with solve_ivp...")
 # Choose a method - 'RK45' is a good default (similar to RK4/5)

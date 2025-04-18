@@ -1,5 +1,5 @@
 from .device_spec import ferrimagnetic_device, NormalLLG
-from .devices import GdFeCo_MTJ, GPT_MTJ
+from .devices import *
 from .methods import *
 
 # Import specific modules or functions to make them accessible at the package level

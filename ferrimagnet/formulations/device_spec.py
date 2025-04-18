@@ -27,7 +27,24 @@ class ferrimagnetic_device():
         self.alpha_eff = ((alpha_a * M_a) / gamma_a + (alpha_b * M_b) / gamma_b) / (M_a / gamma_a + M_b / gamma_b)
         self.K_eff = K - self.u0 * (M_a - M_b) ** 2 / 2
         self.gamma_eff = (M_a - M_b) / (M_a / gamma_a + M_b / gamma_b)
-
+        # Print all initialized parameters
+        print("Initialized Parameters:")
+        print(f"  Film thickness (tf): {self.tf} m")
+        print(f"  Spin current density (J): {self.J} A/m²")
+        print(f"  Spin-Hall angle (theta_eff): {self.theta_eff}")
+        print(f"  Gyromagnetic ratio (gamma_a): {self.gamma_a} rad/(s·T)")
+        print(f"  Gyromagnetic ratio (gamma_b): {self.gamma_b} rad/(s·T)")
+        print(f"  Exchange coupling (c): {self.c} A/m")
+        print(f"  Magnetization saturation (M_a): {self.M_a} A/m")
+        print(f"  Magnetization saturation (M_b): {self.M_b} A/m")
+        print(f"  Net magnetization (M): {self.M} A/m")
+        print(f"  Damping parameter (alpha_a): {self.alpha_a}")
+        print(f"  Damping parameter (alpha_b): {self.alpha_b}")
+        print(f"  Anisotropy constant (K): {self.K}")
+        print(f"  External field (H_ext): {self.H_ext}")
+        print(f"  Effective damping (alpha_eff): {self.alpha_eff}")
+        print(f"  Effective anisotropy (K_eff): {self.K_eff}")
+        print(f"  Effective gyromagnetic ratio (gamma_eff): {self.gamma_eff} rad/(s·T)")
 
     def __str__(self):
         """Returns a formatted string representation of the device parameters."""
@@ -53,34 +70,39 @@ class ferrimagnetic_device():
 
 
     # ferrimagnetic LLG equation in implicit form: mdot = f(m, mdot)
-    def ferri_LLG(self, m, mdot):
+    def ferri_LLG(self, t, m):
         """Computes the right-hand side of the ferrimagnetic LLG equation."""
-        m = m / np.linalg.norm(m)  # Normalize to ensure |m|=1
-        dE_ani = np.array([0, 0, 2 * m[2] * self.K_eff])
+        # --- 0. Normalize m ---
+        norm_m = np.linalg.norm(m)
+        if norm_m < 1e-9: 
+            return np.zeros_like(m)
+        m_normalized = m / norm_m
         
-        term1 = -self.u0 * self.gamma_eff * np.cross(m, self.H_ext)
-        term2 = self.gamma_eff / self.M * np.cross(m, np.cross(m, dE_ani))
-        term3 = self.alpha_eff * np.cross(m, mdot)
-        term4 = -self.gamma_eff * ((self.hbar * self.theta_eff) / (2 * self.e * self.tf * self.M)) * self.J * np.cross(m, np.cross(np.array([0, 1, 0]), m))
+        # External Field
+        H_ext_term = -self.u0 * self.gamma_eff * self.H_ext 
 
-        return term1 + term2 + term3 + term4
-    
-    def ferri_LLG_implicit(self, m, m_next, dt):
-        """Computes the right-hand side of the ferrimagnetic LLG equation with fully implicit damping."""
-        # Normalize m to ensure |m| = 1
-        m_next = m_next / np.linalg.norm(m_next)
-        
-        # Calculate anisotropy energy derivative
-        dE_ani = np.array([0, 0, 2 * m_next[2] * self.K_eff])
-        
-        # Compute each term:
-        term1 = -self.u0 * self.gamma_eff * np.cross(m_next, self.H_ext)  # External field term
-        term2 = self.gamma_eff / self.M * np.cross(m_next, np.cross(m_next, dE_ani))  # Anisotropy term
-        term3 = self.alpha_eff * np.cross(m_next, (m_next - m) / dt)  # Damping term with implicit update
-        term4 = -self.gamma_eff * ((self.hbar * self.theta_eff) / (2 * self.e * self.tf * self.M)) * self.J * np.cross(m_next, np.cross(np.array([0, 1, 0]), m_next))  # Spin torque term
+        # Anisotropy Field (Uniaxial)
+        H_k_term = np.zeros(3)
+        if self.K_eff is not None:
+            dE_ani = np.array([0, 0, 2 * m[2] * self.K_eff])
+            H_k_term = self.gamma_eff/self.M * dE_ani
 
-        # Return the sum of the terms, which is the effective torque
-        return term1 + term2 + term3 + term4
+        # Cuppling Field (Exchange)
+        H_c_term = np.zeros(3)
+        if self.theta_eff is not None:
+            coefficient = -self.gamma_eff * (self.p + self.q) * self.hbar * self.theta_eff / 2 / self.e / self.M / self.tf * self.J
+            H_c_term = coefficient * np.cross(np.array([0, 1, 0]), m_normalized)
+
+        # --- 2. Calculate TOTAL Effective Field ---
+        H_eff = (H_ext_term + H_k_term + H_c_term)
+        # print(f"Effective field (H_eff): {H_eff}")
+
+        precondition = 1 / (1 + self.alpha_eff**2)
+        term1 = np.cross(m, H_eff) * precondition
+        term2 = self.alpha_eff * np.cross(m, term1) * precondition
+       
+        # print("dmdt:", f" {term1 + term2}")
+        return term1 + term2
 
 import numpy as np
 
