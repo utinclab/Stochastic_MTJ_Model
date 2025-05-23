@@ -7,9 +7,24 @@ from scipy.integrate import solve_ivp # <--- Import solve_ivp
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from formulations import *
 
+def euler_integrate(ode_func, t_span, y0, dt):
+    t0, t1 = t_span
+    num_steps = int((t1 - t0) / dt)
+    t_vals = np.linspace(t0, t1, num_steps + 1)
+    y_vals = np.zeros((num_steps + 1, len(y0)))
+    y_vals[0] = y0
+
+    y = y0.copy()
+    for i in range(num_steps):
+        dydt = ode_func(t_vals[i], y)
+        y += dt * dydt
+        y_vals[i + 1] = y
+
+    return t_vals, y_vals
+
 # Random initial conditions
 dt = 1e-12  # Smaller time step for stability
-steps = 20000  # More time steps for better resolution
+steps = 2000  # More time steps for better resolution
 
 # --- Time Integration using solve_ivp ---
 
@@ -25,25 +40,30 @@ m0_aniso = np.array([0.4, 0.1, np.sqrt(1-0.4**2-0.1**2)]) # Start at arbitrary a
 damp = ferrimagnetic_device(**pure_damp)
 m0_damp = np.array([0.4, 0.1, np.sqrt(1-0.4**2-0.1**2)]) # Start at arbitrary angle
 
+noise = ferrimagnetic_device(**thermal_noise_test)
 m0_random = random_initial_magnetization() # Initial condition (unit vector)
 
-
+kwon = ferrimagnetic_device(**ferromagnet_test, ferro=True)
+m0_random = random_initial_magnetization() # Initial condition (unit vector)
 
 m0 = m0_random # Choose between m0_aniso or m0_random
-ode_func = ferri.ferri_LLG # Define the ODE function
+ode_func = kwon.ferri_LLG # Define the ODE function
 
-print("Starting ODE integration with solve_ivp...")
-# Choose a method - 'RK45' is a good default (similar to RK4/5)
-# Other options: 'BDF', 'LSODA' (good for stiff problems)
-sol = solve_ivp(
-    fun=ode_func,
-    t_span=t_span,
-    y0=m0,
-    method='RK45',  # Or 'BDF', 'LSODA' etc.
-    t_eval=t_eval,
-    dense_output=False # Set True if you need interpolation between steps
-)
-print("Integration finished.")
+# print("Starting ODE integration with solve_ivp...")
+# # Choose a method - 'RK45' is a good default (similar to RK4/5)
+# # Other options: 'BDF', 'LSODA' (good for stiff problems)
+# sol = solve_ivp(
+#     fun=ode_func,
+#     t_span=t_span,
+#     y0=m0,
+#     method='RK45',  # Or 'BDF', 'LSODA' etc.
+#     t_eval=t_eval,
+#     dense_output=False # Set True if you need interpolation between steps
+# )
+# print("Integration finished.")
+
+sol = euler_integrate(ode_func, t_span=(0, 5e-9), y0=m0, dt=1e-12)
+print("Euler integration finished.")
 
 # Check if the solver was successful
 if not sol.success:
@@ -99,7 +119,7 @@ total_data_points = m_trajectory.shape[0]
 # Define how many data points to skip between animation frames
 # Example: frame_skip = 10 will display data point 0, 10, 20, etc.
 # Adjust this value: larger skip means faster animation, less smooth.
-frame_skip = 20  # Or 5, 20, 50 etc.
+frame_skip = 10  # Or 5, 20, 50 etc.
 
 # Generate the sequence of trajectory indices to actually use for animation frames
 # We use range(start, stop, step)

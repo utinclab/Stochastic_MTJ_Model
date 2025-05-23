@@ -9,6 +9,7 @@ def mtj_mod(init,phi_init,t_step,v_pulse,t_pulse,t_relax,Happl,Hshe,J_stt,J_she,
     e = 1.6e-19                
     kb = 1.38e-23;              
     gamma = 2*u0*uB/h_bar
+    print("gamma = ", gamma)
     gamma_b = gamma/u0
 
     # MTJ Parameters

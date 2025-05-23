@@ -1,12 +1,14 @@
 import numpy as np
+from numba import njit
 
 class ferrimagnetic_device():
     # constants
     hbar = 1.0545718e-34  # Reduced Planck's constant (J·s)
     e = 1.60217662e-19    # Electron charge (C)
     u0 = 4 * np.pi * 1e-7 # Vacuum permeability (T·m/A)
+    k_B = 1.380649e-23    # Boltzmann constant (J/K)
 
-    def __init__(self, tf, J, theta_eff, gamma_a, gamma_b, c, p, q, M_a, M_b, alpha_a, alpha_b, K, H_ext):
+    def __init__(self, tf, J, theta_eff, gamma_a, gamma_b, c, p, q, M_a, M_b, alpha_a, alpha_b, K, H_ext, dt, T=300, ferro=False):
         self.tf = tf                    # Film thickness (m)
         self.J = J                      # Spin current density (A/m²)
         self.theta_eff = theta_eff      # Spin-Hall angle (dimensionless)
@@ -17,16 +19,19 @@ class ferrimagnetic_device():
         self.q = q
         self.M_a = M_a                  # magnetization saturation a
         self.M_b = M_b                  # magnetization saturation b
-        self.M = M_a - M_b              # Net magnetization
+        self.M = M_a if ferro else M_a - M_b              # Net magnetization
         self.alpha_a = alpha_a          # Damping parameter for a sublattice
         self.alpha_b = alpha_b          # Damping parameter for b sublattice
         self.K = K                      # Anisotropy constant (uniaxial)
         self.H_ext = H_ext              # External field
+        self.T = T                      # Temperature (K)
+        self.dt = dt                    # Time step (s)
+        self.count = 0
 
         # Effective parameters
-        self.alpha_eff = ((alpha_a * M_a) / gamma_a + (alpha_b * M_b) / gamma_b) / (M_a / gamma_a + M_b / gamma_b)
-        self.K_eff = K - self.u0 * (M_a - M_b) ** 2 / 2
-        self.gamma_eff = (M_a - M_b) / (M_a / gamma_a + M_b / gamma_b)
+        self.alpha_eff = alpha_a if ferro else ((alpha_a * M_a) / gamma_a + (alpha_b * M_b) / gamma_b) / (M_a / gamma_a + M_b / gamma_b)
+        self.K_eff = -K if ferro else K - self.u0 * (M_a - M_b) ** 2 / 2
+        self.gamma_eff = gamma_a if ferro else (M_a - M_b) / (M_a / gamma_a + M_b / gamma_b)
         # Print all initialized parameters
         print("Initialized Parameters:")
         print(f"  Film thickness (tf): {self.tf} m")
@@ -77,31 +82,50 @@ class ferrimagnetic_device():
         if norm_m < 1e-9: 
             return np.zeros_like(m)
         m_normalized = m / norm_m
-        
+
+        if t > 8e-10:
+            J = 0
+        else:
+            J = self.J
+        # print(t, J)
         # External Field
         H_ext_term = -self.u0 * self.gamma_eff * self.H_ext 
+        # H_ext_raw = self.H_ext
+
+        # Thermal Noise field
+        Thermal_coefficient = np.sqrt((2 * self.k_B * self.T * self.alpha_eff) / (self.M * self.gamma_eff * 10e-18 * self.u0 * self.dt))
+        H_therm_raw = np.random.normal(0, 1, 3) * Thermal_coefficient
+        H_therm_term = H_therm_raw * self.gamma_eff
+
 
         # Anisotropy Field (Uniaxial)
-        H_k_term = np.zeros(3)
+        H_k_term = H_k_raw = np.zeros(3)
         if self.K_eff is not None:
             dE_ani = np.array([0, 0, 2 * m[2] * self.K_eff])
             H_k_term = self.gamma_eff/self.M * dE_ani
+            # H_k_raw = dE_ani / (self.u0 * self.M)
 
         # Cuppling Field (Exchange)
-        H_c_term = np.zeros(3)
+        H_c_term = H_c_raw = np.zeros(3)
         if self.theta_eff is not None:
-            coefficient = -self.gamma_eff * (self.p + self.q) * self.hbar * self.theta_eff / 2 / self.e / self.M / self.tf * self.J
+            coefficient = -self.gamma_eff * (self.p + self.q) * self.hbar * self.theta_eff / 2 / self.e / self.M / self.tf * J
             H_c_term = coefficient * np.cross(np.array([0, 1, 0]), m_normalized)
 
         # --- 2. Calculate TOTAL Effective Field ---
-        H_eff = (H_ext_term + H_k_term + H_c_term)
-        # print(f"Effective field (H_eff): {H_eff}")
+        H_eff = (H_ext_term + H_k_term + H_c_term + H_therm_term)
+        # print("H_ext_field:", H_ext_raw)
+        # print("H_k_field:", H_k_raw)
+        # print("H_c_field:", H_c_raw)
+        # print("H_therm_field:", H_therm_raw)
+
+
 
         precondition = 1 / (1 + self.alpha_eff**2)
         term1 = np.cross(m, H_eff) * precondition
         term2 = self.alpha_eff * np.cross(m, term1) * precondition
        
-        # print("dmdt:", f" {term1 + term2}")
+        print("dmdt:", f" {term1 + term2} count: {self.count}")
+        self.count += 1
         return term1 + term2
 
 import numpy as np
