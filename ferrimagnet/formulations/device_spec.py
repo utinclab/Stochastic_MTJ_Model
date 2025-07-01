@@ -27,6 +27,9 @@ class ferrimagnetic_device():
         self.T = T                      # Temperature (K)
         self.dt = dt                    # Time step (s)
         self.count = 0
+        self.a = 50e-9
+        self.b = 50e-9
+        self.v = self.tf*np.pi*self.b*self.a/4
 
         # Effective parameters
         self.alpha_eff = alpha_a if ferro else ((alpha_a * M_a) / gamma_a + (alpha_b * M_b) / gamma_b) / (M_a / gamma_a + M_b / gamma_b)
@@ -83,46 +86,38 @@ class ferrimagnetic_device():
             return np.zeros_like(m)
         m_normalized = m / norm_m
 
-        if t > 8e-10:
-            J = 0
-        else:
-            J = self.J
+        J=0
         # print(t, J)
         # External Field
-        H_ext_term = -self.u0 * self.gamma_eff * self.H_ext 
+        H_ext_term = -self.u0 * self.gamma_eff * self.H_ext # now in tesla
         # H_ext_raw = self.H_ext
 
         # Thermal Noise field
-        Thermal_coefficient = np.sqrt((2 * self.k_B * self.T * self.alpha_eff) / (self.M * self.gamma_eff * 10e-18 * self.u0 * self.dt))
-        H_therm_raw = np.random.normal(0, 1, 3) * Thermal_coefficient
+        Thermal_coefficient = np.sqrt((2 * self.k_B * self.T * self.alpha_eff) / (self.M * self.gamma_eff * self.v * self.dt)) # tesla
+        random_vector = np.random.normal(0, 1, 3)
+        normalized_random_vector = random_vector / np.linalg.norm(random_vector)
+        H_therm_raw = normalized_random_vector * Thermal_coefficient
         H_therm_term = H_therm_raw * self.gamma_eff
-
 
         # Anisotropy Field (Uniaxial)
         H_k_term = H_k_raw = np.zeros(3)
         if self.K_eff is not None:
             dE_ani = np.array([0, 0, 2 * m[2] * self.K_eff])
-            H_k_term = self.gamma_eff/self.M * dE_ani
+            H_k_term = self.gamma_eff/self.M * dE_ani # T/s
             # H_k_raw = dE_ani / (self.u0 * self.M)
 
-        # Cuppling Field (Exchange)
+        # Couppling Field (Exchange)
         H_c_term = H_c_raw = np.zeros(3)
         if self.theta_eff is not None:
             coefficient = -self.gamma_eff * (self.p + self.q) * self.hbar * self.theta_eff / 2 / self.e / self.M / self.tf * J
             H_c_term = coefficient * np.cross(np.array([0, 1, 0]), m_normalized)
 
         # --- 2. Calculate TOTAL Effective Field ---
-        H_eff = (H_ext_term + H_k_term + H_c_term + H_therm_term)
-        # print("H_ext_field:", H_ext_raw)
-        # print("H_k_field:", H_k_raw)
-        # print("H_c_field:", H_c_raw)
-        # print("H_therm_field:", H_therm_raw)
+        H_eff = (H_ext_term + H_k_term + H_therm_term)
 
-
-
-        precondition = 1 / (1 + self.alpha_eff**2)
-        term1 = np.cross(m, H_eff) * precondition
-        term2 = self.alpha_eff * np.cross(m, term1) * precondition
+        coefficient = 1 / (1 + self.alpha_eff**2)
+        term1 = np.cross(m, H_eff) * coefficient
+        term2 = self.alpha_eff * np.cross(m, term1) * coefficient
        
         print("dmdt:", f" {term1 + term2} count: {self.count}")
         self.count += 1

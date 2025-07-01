@@ -26,7 +26,7 @@ GdFeCo_MTJ = {
     "H_ext": np.array([0.01, 0, 0]),  # Tesla
 
     # time step for integration
-    "dt": 5e-11,            # seconds
+    "dt": 5e-15,            # seconds
 
     # temperature
     "T": 300,               # Kelvin

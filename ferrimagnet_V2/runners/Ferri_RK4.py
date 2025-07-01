@@ -24,8 +24,8 @@ def euler_integrate(ode_func, t_span, y0, dt):
     return t_vals, y_vals
 
 # Random initial conditions
-dt = 5e-11  # Smaller time step for stability
-steps = 2000  # More time steps for better resolution
+dt = 5e-15  # Smaller time step for stability
+steps = 200000000  # More time steps for better resolution
 
 # --- Time Integration using solve_ivp ---
 
@@ -38,13 +38,13 @@ t_eval = np.linspace(t_start, t_end, steps + 1)
 ferri = ferrimagnetic_device(**GdFeCo_MTJ)
 m0_aniso = np.array([0.4, 0.1, np.sqrt(1-0.4**2-0.1**2)]) # Start at arbitrary angle
 
-damp = ferrimagnetic_device(**pure_damp)
-m0_damp = np.array([0.4, 0.1, np.sqrt(1-0.4**2-0.1**2)]) # Start at arbitrary angle
+# damp = ferrimagnetic_device(**pure_damp)
+# m0_damp = np.array([0.4, 0.1, np.sqrt(1-0.4**2-0.1**2)]) # Start at arbitrary angle
 
-noise = ferrimagnetic_device(**thermal_noise_test)
-m0_random = random_initial_magnetization() # Initial condition (unit vector)
+# noise = ferrimagnetic_device(**thermal_noise_test)
+# m0_random = random_initial_magnetization() # Initial condition (unit vector)
 
-kwon = ferrimagnetic_device(**ferromagnet_test, ferro=True)
+# kwon = ferrimagnetic_device(**ferromagnet_test, ferro=True)
 m0_random = random_initial_magnetization() # Initial condition (unit vector)
 
 m0 = m0_random # Choose between m0_aniso or m0_random

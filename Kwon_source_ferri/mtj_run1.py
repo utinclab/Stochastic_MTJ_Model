@@ -19,7 +19,7 @@ Hshe = 0 # 300Oe=2.4e4 200Oe=1.6e4 100Oe=8e3
 J_stt = np.linspace(0,0,steps)
 J_she = -4e11
 cycles = 100
-reps = 200
+reps = 1
 
 for rep in range(reps):
     xi = (rep-100)/10
@@ -62,7 +62,7 @@ for rep in range(reps):
 
     # np.save('tm',t)
     # np.save('mz',mz_arr)
-    # data_path = './Kwon_source/data/'
+    # data_path = './Kwon_source_ferri/data/'
     # np.save(data_path+'tm_'+str(rep),t)
     # np.save(data_path+'mz_'+str(rep),mz)
     # np.save(data_path+'mx_'+str(rep),mx)
@@ -70,7 +70,7 @@ for rep in range(reps):
 
 
     # Assuming you have your data arrays t, mx, my, mz
-    data_path = './Kwon_source/figures/'
+    data_path = './Kwon_source_ferri/figures/'
     # 2D Plot for Mz vs. Time
     plt.figure()
     plt.plot(t * 1e9, mz)
