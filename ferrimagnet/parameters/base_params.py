@@ -86,7 +86,6 @@ class MTJParameters:
         ) / self.u0
         self.F = (self.gamma * self.h_bar) / (2 * self.u0 * self.e * self.tf * self.Ms)
 
-
     def print_params(self):
             """Print all parameters for ferrimagnetic MTJ."""
             print("Ferrimagnetic MTJ Parameters:")
@@ -96,3 +95,10 @@ class MTJParameters:
                     print(f"  {field_name}: {value:.4e}")
                 else:
                     print(f"  {field_name}: {value}")
+    
+    def to_dict(self):
+        return {
+            key: value
+            for key, value in self.__dict__.items()
+            if not key.startswith("_")
+        }

@@ -12,7 +12,7 @@ def compute_effective_field_jit(theta, phi,
                                 Ki, tf, Ms, u0, ksi, tox,
                                 Hx, Hy, Hz, Nx, Ny, Nz,
                                 V, Htherm,
-                                noise_ax, noise_ay, noise_az):
+                                noise_ax, noise_ay, noise_az, out):
     """
     Return Ax, Ay, Az as a 3-element array.
     noise_* are pre-drawn normal variates (floats).
@@ -28,7 +28,6 @@ def compute_effective_field_jit(theta, phi,
     Ay = Hy - Ny * Ms * sin_t * sin_p + noise_ay * Htherm
     Az = Hz - Nz * Ms * cos_t + Hk * cos_t + noise_az * Htherm
 
-    out = np.empty(3, dtype=np.float64)
     out[0] = Ax
     out[1] = Ay
     out[2] = Az
@@ -106,13 +105,13 @@ class ParallelCPUDevice(DeviceBase):
         noise_ax = np.random.normal()
         noise_ay = np.random.normal()
         noise_az = np.random.normal()
-
+        tmp_out = np.empty(3, dtype=np.float64)
         field_arr = compute_effective_field_jit(
             theta, phi,
             p.Ki, p.tf, p.Ms, p.u0, p.ksi, p.tox,
             p.Hx, p.Hy, p.Hz, p.Nx, p.Ny, p.Nz,
             V, p.Htherm,
-            noise_ax, noise_ay, noise_az
+            noise_ax, noise_ay, noise_az, tmp_out
         )
 
         # return as a small dict-like object to keep original calling code compatible

@@ -1,87 +1,57 @@
 from sweeps.sweep import DeviceSweep
-from devices.base import DeviceBase
 from devices.parallel_cpu import ParallelCPUDevice
+from utils.utils import MaterialUtils
 from parameters.ferri_params import FerriParameters, MTJParameters
 import numpy as np
-import json
-import os
-import matplotlib.pyplot as plt
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import cm
-from matplotlib.colors import Normalize
-from mpl_toolkits.mplot3d.art3d import Line3DCollection
-import matplotlib.gridspec as gridspec
-from matplotlib.animation import FuncAnimation
-import numpy as np
-import matplotlib
-from matplotlib.gridspec import GridSpec
+from graphing.plotter import Plotter
+import time, atexit
+import shutil
 
 def main():
+    start_time = time.perf_counter()
+    def _print_elapsed():
+        elapsed = time.perf_counter() - start_time
+        print(f"Total execution time: {elapsed:.4f} s")
+    atexit.register(_print_elapsed)
+
+    # empty tmp folder
+    tmp_folder = './tmp/'
+    shutil.rmtree(tmp_folder, ignore_errors=True)
+
     # Define the device classes and parameter sets to sweep
     device_classes = [ParallelCPUDevice]  # Add other device classes if needed
-    param_sets = [
-        FerriParameters(temperature=280),
-        FerriParameters(temperature=320),
-        MTJParameters(temperature=280)
-    ]
 
-    # Create a DeviceSweep instance
-    sweep = DeviceSweep(device_classes, param_sets)
+
+    # Sweep Alpha and Temperature
+    param_sets=[]
+    for i in range(10):
+        for j in range(1):
+            param_sets.append(
+                FerriParameters(
+                    alpha_a=(0.050 + i*0.001),
+                    temperature=(275 + j)
+                )
+            )
+    sweep = DeviceSweep(device_classes, param_sets, tmp_folder='./tmp/')
 
     # Define the range of j_stt values to sweep
-    j_stt_arr = np.linspace(-1e11,1e11,10)
+    j_stt_arr = np.linspace(-1e11,1e11,21)
 
     # Run the sweep with specified j_she and number of flips
     j_she = -4e11  # Example spin Hall current density in A/m^2
-    flips = 1000  # Number of stochastic flips to simulate per j_stt value
+    flips = 100  # Number of stochastic flips to simulate per j_stt value
 
-    results = sweep.run_all(j_stt_arr, j_she, flips)
+    tmp_files = sweep.run_all_parallel(j_stt_arr, j_she, flips)
+    results = MaterialUtils.load_all_results(tmp_folder='./tmp/')
+    print(f"Loaded {len(results)} results from sweep.")
+    print(results[0].keys())
+    print(results[0]['simulation_output'][0].keys())
 
-    # save results as a json file
-    for res in results:
-        for sim_out in res["simulation_output"]:
-
-            device = sim_out["device"]
-            params = sim_out["params"]
-            j_stt = sim_out["j_stt"]
-            result_data = sim_out["result"]
-
-            mx = np.sin(result_data["theta"]) * np.cos(result_data["phi"])
-            my = np.sin(result_data["theta"]) * np.sin(result_data["phi"])
-            mz = np.cos(result_data["theta"])
-            # print(len(mz))
-            # print(len(result_data["t"]))
-            
-            """ 2D bittrace plot """
-            # plt.figure(figsize=(6, 6))
-            # gs = gridspec.GridSpec(2, 1, height_ratios=[1, 1], hspace=0.05)  # Two rows, shared x-axis
-
-            # # Top plot (new y-axis, same x)
-            # ax1 = plt.subplot(gs[0])
-            # ax1.plot(result_data["t"] * 1e9, result_data["J_she"], color='tab:orange')
-            # ax1.set_ylabel('SOT current (A/m^2)', fontsize=15)
-            # ax1.tick_params(labelbottom=False)  # Hide x-axis labels here
-
-            # # Bottom plot (original plot)
-            # ax2 = plt.subplot(gs[1], sharex=ax1)
-            # ax2.plot(result_data["t"] * 1e9, mz, color='tab:blue')
-            # ax2.set_xlabel('Time (ns)', fontsize=15)
-            # ax2.set_ylabel('Mz', fontsize=15)
-            # plt.show()
-            # plt.close()
-
-        plt.figure(figsize=(6, 6))
-        plt.plot(res["j_stt_arr"], res["bitstream_averages"], marker='o', linestyle='-', color='tab:blue')
-        plt.xlabel('STT bias current (A/m^2)', fontsize=15)
-        plt.ylabel('bitstream average', fontsize=15)
-        plt.title(f'S-Curve', fontsize=15)
-        plt.grid()
-        plt.show()
-        plt.close() 
-
-        # Save the S-curve data
-        np.save(f'ferri_s_J_stt', res["j_stt_arr"])
-        np.save(f'ferri_s_bitstr_avg', res["bitstream_averages"])
+    # Plot the results using the Plotter class
+    plotter = Plotter(figure_path='./figures/10222025/alpha_a_sweep2/', results=results, sweep_variables=["temperature", "alpha_a"])
+    reduced_plotter = Plotter(figure_path='./figures/10222025/alpha_a_sweep2/', results=results, sweep_variables=["temperature", "alpha_a"])
+    plotter.plot_scurve()
+    plotter.save_parameters()
+    reduced_plotter.plot_bittrace()
 if __name__ == "__main__":
     main()

@@ -56,3 +56,10 @@ class FerriParameters(MTJParameters):
         self.Htherm = np.sqrt((2 * self.u0 * self.alpha * self.kb * self.temperature) / 
                             (self.Bsat * self.gamma_b * self.t_step * self.v)) / self.u0
         self.F = (self.gamma * self.h_bar) / (2 * self.u0 * self.e * self.tf * self.Ms)
+
+    def to_dict(self):
+        return {
+            key: value
+            for key, value in self.__dict__.items()
+            if not key.startswith("_")
+        }

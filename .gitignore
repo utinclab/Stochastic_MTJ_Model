@@ -24,6 +24,9 @@
 **/wordstreams
 **/backup_results
 **/runs
+**/figures
+**/ferrimagnet/figures
+**/ferrimagnet/tmp
 *.csv
 
 #cache
