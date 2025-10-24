@@ -9,90 +9,60 @@ class MTJSimulation:
         self.tmp_dir = tmp_dir
         os.makedirs(tmp_dir, exist_ok=True)
 
-    def run(self, state_init, j_stt, j_she, flips, chunk_size=10000):
-        """Stream results to disk instead of keeping all in memory."""
+    def run(self, state_init, j_stt, j_she, flips, index, x, save_simulation_data=False):
+        """
+        Run the full MTJ simulation and save results into a single file.
+        The file is named 'sim_i_j.npz' where index = (i, j).
+        """
+        i, j = index
+        os.makedirs(self.tmp_dir, exist_ok=True)
+
         state = state_init
-        t_pulse_steps = int(self.device.params.t_pulse/self.device.params.t_step)
-        t_relax_steps = int(self.device.params.t_relax/self.device.params.t_step)
-        total_steps = (t_pulse_steps + t_relax_steps) * flips + 1
+        params = self.device.params
+        t_pulse_steps = int(params.t_pulse / params.t_step)
+        t_relax_steps = int(params.t_relax / params.t_step)
 
-        # Temporary binary files for streaming arrays
-        arrays = ["theta", "phi", "energy", "power", "R", "J_she"]
-        tmp_files = {k: os.path.join(self.tmp_dir, f"{k}_{os.getpid()}.npy") for k in arrays}
-        buffers = {k: [] for k in arrays}
-
-        # Write bitstream separately
+        arrays = ["theta", "phi", "energy", "power", "R"]
+        results = {k: [] for k in arrays}
         bitstream = np.empty(flips, dtype=np.float64)
 
-        t_step = self.device.params.t_step
-        t_array = np.arange(0, total_steps * t_step, t_step)
-
         # Initialize state
-        t = 0
-        current = [state[0], state[1], state[2], state[3], state[4], self.device.params.J_she]
+        for k, val in zip(arrays, state[:6]):
+            results[k].append(val)
 
-        for k, val in zip(arrays, current):
-            buffers[k].append(val)
-
-        t += 1
-        chunk_idx = 0
-
-        for i in tqdm(range(flips), ncols=80, leave=False):
+        for flip_idx in tqdm(range(flips), ncols=80, leave=False):
+            # Pulse period
             for _ in range(t_pulse_steps):
-                self.device.params.J_she = 0
-                self.device.params.J_stt = j_stt
-                H_eff = self.device.compute_effective_field(state, self.device.params.v_pulse)
-                state = self.device.update_state(state, H_eff, self.device.params.v_pulse)
-                current = [state[0], state[1], state[2], state[3], state[4], self.device.params.J_she]
+                params.J_she = 0
+                params.J_stt = j_stt
+                H_eff = self.device.compute_effective_field(state, params.v_pulse)
+                state = self.device.update_state(state, H_eff, params.v_pulse)
+                current = [state[0], state[1], state[2], state[3], state[4]]
                 for k, val in zip(arrays, current):
-                    buffers[k].append(val)
-                t += 1
+                    results[k].append(val)
 
-                # Stream to disk periodically
-                if t % chunk_size == 0:
-                    self._flush_to_disk(buffers, tmp_files, chunk_idx)
-                    chunk_idx += 1
-                    for k in arrays:
-                        buffers[k] = []
-
+            # Relaxation period
             for _ in range(t_relax_steps):
-                self.device.params.J_she = j_she
-                self.device.params.J_stt = -j_stt
-                H_eff = self.device.compute_effective_field(state, self.device.params.vhold)
-                state = self.device.update_state(state, H_eff, self.device.params.vhold)
-                current = [state[0], state[1], state[2], state[3], state[4], self.device.params.J_she]
+                params.J_she = j_she
+                params.J_stt = -j_stt
+                H_eff = self.device.compute_effective_field(state, params.vhold)
+                state = self.device.update_state(state, H_eff, params.vhold)
+                current = [state[0], state[1], state[2], state[3], state[4]]
                 for k, val in zip(arrays, current):
-                    buffers[k].append(val)
-                t += 1
-                if t % chunk_size == 0:
-                    self._flush_to_disk(buffers, tmp_files, chunk_idx)
-                    chunk_idx += 1
-                    for k in arrays:
-                        buffers[k] = []
+                    results[k].append(val)
 
-            bitstream[i] = 1 if np.cos(state[0]) > 0 else -1
+            bitstream[flip_idx] = 1 if np.cos(state[0]) > 0 else -1
 
-        # Flush remaining data
-        self._flush_to_disk(buffers, tmp_files, chunk_idx)
+        # Convert to numpy arrays
+        for k in arrays:
+            results[k] = np.array(results[k], dtype=np.float64)
 
-        return {
-            "tmp_files": tmp_files,
-            "bitstream": bitstream,
-            "t": t_array,
-            "total_steps": total_steps
-        }
-    
+        if save_simulation_data:
+            # Save each array separately
+            for k, arr in results.items():
+                np.save(os.path.join(self.tmp_dir, f"{k}/{k}_{i}_{j}_{x}.npy"), arr)
 
-    def _flush_to_disk(self, buffers, tmp_files, chunk_idx):
-        """Append buffered data to .npy files incrementally."""
-        for key, buf in buffers.items():
-            arr = np.array(buf, dtype=np.float64)
-            path = tmp_files[key]
-            if os.path.exists(path):
-                # Append mode
-                with open(path, "ab") as f:
-                    np.save(f, arr)
-            else:
-                # First write
-                with open(path, "wb") as f:
-                    np.save(f, arr)
+            # Also save bitstream
+            np.save(os.path.join(self.tmp_dir, f"bitstream/bitstream_{i}_{j}_{x}.npy"), bitstream)
+
+        return np.mean(bitstream)
