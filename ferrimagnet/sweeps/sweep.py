@@ -6,8 +6,8 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 
 def _run_and_save(task):
     """Worker function that runs simulation and writes result directly to disk."""
-    self_ref, dev_class, ps, j_stt_arr, j_she, flips, index = task
-    result = self_ref.run_one((dev_class, ps, j_stt_arr, j_she, flips, index))
+    self_ref, dev_class, ps, j_stt_arr, j_she, flips, index, save_data = task
+    result = self_ref.run_one((dev_class, ps, j_stt_arr, j_she, flips, index, save_data))
     return result
 
 
@@ -19,7 +19,7 @@ class DeviceSweep:
 
 
     def run_one(self, args):
-        device_class, param_set, j_stt_arr, j_she, flips, index = args
+        device_class, param_set, j_stt_arr, j_she, flips, index, save_data = args
         bitstream_averages = []
         results_files = []
         for x, j_stt in enumerate(j_stt_arr):
@@ -28,16 +28,16 @@ class DeviceSweep:
             initial_state = (np.pi/2, 0, 0, 0, 0)
 
             # Run and stream to disk
-            bitstream_average = sim.run(state_init=initial_state, j_she=j_she, j_stt=j_stt, flips=flips, index=index, x=x)
+            bitstream_average = sim.run(state_init=initial_state, j_she=j_she, j_stt=j_stt, flips=flips, index=index, x=x, save_simulation_data=save_data)
             bitstream_averages.append(bitstream_average)
         return {index: bitstream_averages}
 
 
-    def run_all_parallel(self, j_stt_arr, j_she, flips):
+    def run_all_parallel(self, j_stt_arr, j_she, flips, save_data=True):
         os.makedirs(self.tmp_folder, exist_ok=True)
 
         tasks = [
-            (self, dev_class, ps, j_stt_arr, j_she, flips, tuple([i,j]))
+            (self, dev_class, ps, j_stt_arr, j_she, flips, tuple([i,j]), save_data)
             for i, dev_class in enumerate(self.device_classes)
             for j, ps in enumerate(self.param_sets)
         ]
@@ -55,9 +55,9 @@ class DeviceSweep:
         return results
 
 
-    def run_all(self, j_stt_arr, j_she, flips):
+    def run_all(self, j_stt_arr, j_she, flips, save_data=True):
         tasks = [
-            (self, dev_class, ps, j_stt_arr, j_she, flips, tuple([i,j]))
+            (self, dev_class, ps, j_stt_arr, j_she, flips, tuple([i,j]), save_data)
             for i, dev_class in enumerate(self.device_classes)
             for j, ps in enumerate(self.param_sets)
         ]
