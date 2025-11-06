@@ -1,6 +1,5 @@
 from devices.base import DeviceBase
 import numpy as np
-from tqdm import tqdm
 import os
 
 class MTJSimulation:
@@ -30,7 +29,7 @@ class MTJSimulation:
         for k, val in zip(arrays, state[:6]):
             results[k].append(val)
 
-        for flip_idx in tqdm(range(flips), ncols=80, leave=False):
+        for flip_idx in range(flips):
             # Pulse period
             for _ in range(t_pulse_steps):
                 params.J_she = 0

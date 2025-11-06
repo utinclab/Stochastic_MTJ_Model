@@ -2,6 +2,7 @@ import os
 import numpy as np
 import multiprocessing
 from simulation.simulation import MTJSimulation
+from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 def _run_and_save(task):
@@ -49,7 +50,7 @@ class DeviceSweep:
             futures = []
             for i, t in enumerate(tasks):
                 futures.append(executor.submit(_run_and_save, t))
-            for future in as_completed(futures):
+            for future in tqdm(as_completed(futures), total=len(futures), desc="Running tasks"):
                 meta = future.result()
                 results.update(meta)
         return results

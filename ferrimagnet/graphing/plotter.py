@@ -150,6 +150,19 @@ class Plotter:
                 plt.close() 
 
 
+    def save_bitstream_averages(self):
+        os.makedirs(os.path.join(self.figure_path, "bitstream_averages/"), exist_ok=True)
+        for i, _ in enumerate(self.device_classes):
+            for j, params in enumerate(self.param_sets):
+                bitstream_averages = self.results[(i,j)]
+                _, bitstream_filename = self.set_title_and_filename(params=params, title_prefix="S-Curve - ", filename_prefix="bitstream_", j_stt=0, index = (i,j,0), show_values=True)
+                bitstream_filename = os.path.join(self.figure_path, "bitstream_averages/", bitstream_filename.replace(".png",".npy"))
+                j_stt_filename = "j_stt_arr.npy"
+                np.save(bitstream_filename, np.array(bitstream_averages))
+                np.save(os.path.join(self.figure_path, "bitstream_averages/", j_stt_filename), np.array(self.j_stt_arr))
+                    
+
+
     def plot_combined_scurve(self):
         if len(self.sweep_variables) != 2: 
             raise ValueError("plot_scurve method requires exactly two sweep variables.")

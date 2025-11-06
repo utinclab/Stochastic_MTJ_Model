@@ -15,10 +15,10 @@ def main():
         print(f"Total execution time: {elapsed:.4f} s")
     atexit.register(_print_elapsed)
 
-    date = '10282025'
-    test_name = '10k_bitstream'
-    figure_path = f'./figures/{date}/{test_name}/'
-    data_folder = f'./figures/{date}/{test_name}/data/'
+    date = '10292025'
+    test_name = 'LUT_test1'
+    figure_path = f'./LUT/{date}/{test_name}/'
+    data_folder = f'./LUT/{date}/{test_name}/data/'
     os.makedirs(data_folder, exist_ok=True)
     os.makedirs(figure_path, exist_ok=True)
     os.makedirs(os.path.join(data_folder, "bitstream/"), exist_ok=True)
@@ -28,36 +28,20 @@ def main():
     os.makedirs(os.path.join(data_folder, "power/"), exist_ok=True)
     os.makedirs(os.path.join(data_folder, "R/"), exist_ok=True)
 
-    # Define the device classes and parameter sets to sweep
     device_classes = [ParallelCPUDevice]  # Add other device classes if needed
-    # Sweep Alpha and Temperature
-    param_sets=[MTJParameters(t_step=1e-12, temperature=300, t_pulse=30e-9, t_relax=5e-9), FerriParameters(t_step=1e-12, temperature=300, t_pulse=0.8e-9, t_relax=0.5e-9)]
-    # for i in range(10):
-    #     for j in range(50):
-    #         param_sets.append(
-    #             FerriParameters(
-    #                 alpha_b=(0.001 + i*0.01),
-    #                 temperature=(275 + j)
-    #             )
-    #         )
+    param_sets=[FerriParameters(t_step=1e-12, temperature=300, t_pulse=0.8e-9, t_relax=0.5e-9)]
     sweep = DeviceSweep(device_classes, param_sets, tmp_folder=data_folder)
 
-    # Define the range of j_stt values to sweep
-    # j_stt_arr = np.linspace(-1e11,1e11,50)
-    j_stt_arr = np.linspace(0,0,1)
-
-    # Run the sweep with specified j_she and number of flips
+    j_stt_arr = np.linspace(-1e11,1e11,100)
     j_she = -4e11  # Example spin Hall current density in A/m^2
-    flips = 10000 # Number of stochastic flips to simulate per j_stt value
+    flips = 1000 # Number of stochastic flips to simulate per j_stt value
 
-    results = sweep.run_all_parallel(j_stt_arr, j_she, flips, True)
+    results = sweep.run_all_parallel(j_stt_arr, j_she, flips, False)
 
     # Plot the results using the Plotter class
     plotter = Plotter(figure_path, results, device_classes, param_sets, j_stt_arr, j_she, flips, data_folder, [])
-    # plotter.plot_scurve()
-    # plotter.plot_combined_scurve()
+    plotter.plot_scurve()
     plotter.save_parameters()
-    plotter.plot_bittrace()
-    plotter.plot_3D_trajectory()
+    plotter.save_bitstream_averages()
 if __name__ == "__main__":
     main()
