@@ -50,7 +50,7 @@ class MTJSimulation:
                 for k, val in zip(arrays, current):
                     results[k].append(val)
 
-            bitstream[flip_idx] = 1 if np.cos(state[0]) > 0 else -1
+            bitstream[flip_idx] = 1 if np.cos(state[0]) > 0 else 0
 
         # Convert to numpy arrays
         for k in arrays:

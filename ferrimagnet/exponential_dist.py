@@ -18,21 +18,51 @@ def cdf(x, lmda):
     return 1-np.exp(-lmda*x)
 
 
-def rng(sim,k,lmda,index, save=False):
+def expdist_rng(sim,k,lmda,index, save=False):
         x2 = 2**k
         x0 = 1
         x1 = (x2+x0)/2
         temp = 0
         bits = ""
-        bitstream_path = "./LUT/10292025/LUT_test1/bitstream_averages/bitstream_0_0_0_.npy"
-        j_stt_arr_path = "./LUT/10292025/LUT_test1/bitstream_averages/j_stt_arr.npy"
+        bitstream_path = "./LUT/11112025/LUT_test1/bitstream_averages/bitstream_0_0_0_.npy"
+        j_stt_arr_path = "./LUT/11112025/LUT_test1/bitstream_averages/j_stt_arr.npy"
 
         for i in range(k):
             pright = (cdf(x2,lmda)-cdf(x1,lmda))/(cdf(x2,lmda)-cdf(x0,lmda))
             bias = MaterialUtils.j_stt_bitavg_lut(pright, bitstream_path, j_stt_arr_path)
             out = mtj_sample(sim, bias, index, save)
-            bits += '1' if out == -1 else '0'
-            out = 1 if out == -1 else 0
+            bits += '0' if out == 0 else '1'
+            out = 0 if out == 0 else 1
+            if out == 1:
+                x0 = x1
+            elif out == 0:
+                x2 = x1
+            x1 = (x2+x0)/2
+            temp += out*2**(k-i-1)
+        return temp, bits
+
+
+def corrected_expdist_rng(sim,j,k,lmda,index, save=False):
+        x2 = 2**k
+        x0 = 1
+        x1 = (x2+x0)/2
+        temp = 0
+        bits = ""
+        bitstream_path_flipped = "./LUT/11122025/LUT_test_325_1/bitstream_averages/bitstream_0_0_0_.npy"
+        j_stt_arr_path_flipped = "./LUT/11122025/LUT_test_325_1/bitstream_averages/j_stt_arr.npy"
+        bitstream_path = "./LUT/11112025/LUT_test1/bitstream_averages/bitstream_0_0_0_.npy"
+        j_stt_arr_path = "./LUT/11112025/LUT_test1/bitstream_averages/j_stt_arr.npy"
+
+        for i in range(k):
+            pright = (cdf(x2,lmda)-cdf(x1,lmda))/(cdf(x2,lmda)-cdf(x0,lmda))
+            if i < j:
+                bias = MaterialUtils.j_stt_bitavg_lut(pright, bitstream_path, j_stt_arr_path)
+            else:
+                bias = MaterialUtils.j_stt_bitavg_lut(pright, bitstream_path, j_stt_arr_path)
+                # bias = MaterialUtils.j_stt_bitavg_lut(pright, bitstream_path, j_stt_arr_path) if (index + i) % 2 == 0 else MaterialUtils.j_stt_bitavg_lut(pright, bitstream_path_flipped, j_stt_arr_path_flipped)
+            out = mtj_sample(sim, bias, index, save)
+            bits += '0' if out == 0 else '1'
+            out = 0 if out == 0 else 1
             if out == 1:
                 x0 = x1
             elif out == 0:
@@ -49,8 +79,8 @@ def main():
         print(f"Total execution time: {elapsed:.4f} s")
     atexit.register(_print_elapsed)
 
-    date = '10302025'
-    test_name = 'exponential_dist_test1'
+    date = '11122025'
+    test_name = 'corrected_exponential_dist_test_6_8_1'
     figure_path = f'./figures/{date}/{test_name}/'
     data_folder = f'./figures/{date}/{test_name}/data/'
     os.makedirs(data_folder, exist_ok=True)
@@ -69,7 +99,7 @@ def main():
     intstream = np.empty(100000, dtype=np.int32)
     for i in tqdm(range(100000), desc="Sampling Exponential Distribution", unit="it"):
         lmda = .01
-        temp, _ = rng(sim,8,lmda,i,save=False)
+        temp, _ = corrected_expdist_rng(sim,6,8,lmda,i,save=False)
         intstream[i] = temp
     
     np.save(os.path.join(data_folder, f"intstream/exponential_intstream.npy"), intstream)

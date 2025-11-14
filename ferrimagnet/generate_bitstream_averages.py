@@ -15,8 +15,8 @@ def main():
         print(f"Total execution time: {elapsed:.4f} s")
     atexit.register(_print_elapsed)
 
-    date = '10292025'
-    test_name = 'LUT_test1'
+    date = '11122025'
+    test_name = 'LUT_test_325_1'
     figure_path = f'./LUT/{date}/{test_name}/'
     data_folder = f'./LUT/{date}/{test_name}/data/'
     os.makedirs(data_folder, exist_ok=True)
@@ -29,7 +29,7 @@ def main():
     os.makedirs(os.path.join(data_folder, "R/"), exist_ok=True)
 
     device_classes = [ParallelCPUDevice]  # Add other device classes if needed
-    param_sets=[FerriParameters(t_step=1e-12, temperature=300, t_pulse=0.8e-9, t_relax=0.5e-9)]
+    param_sets=[FerriParameters(t_step=1e-12, temperature=325, t_pulse=0.8e-9, t_relax=0.5e-9)]
     sweep = DeviceSweep(device_classes, param_sets, tmp_folder=data_folder)
 
     j_stt_arr = np.linspace(-1e11,1e11,100)
