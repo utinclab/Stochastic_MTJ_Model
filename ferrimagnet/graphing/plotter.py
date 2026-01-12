@@ -162,7 +162,6 @@ class Plotter:
                 np.save(os.path.join(self.figure_path, "bitstream_averages/", j_stt_filename), np.array(self.j_stt_arr))
                     
 
-
     def plot_combined_scurve(self):
         if len(self.sweep_variables) != 2: 
             raise ValueError("plot_scurve method requires exactly two sweep variables.")
@@ -212,6 +211,56 @@ class Plotter:
             save_path = os.path.join(self.figure_path, f"combined-scurves/", filename)
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
             plt.close()
+
+
+    def plot_combined_scurve_single(self):
+        if len(self.sweep_variables) != 1: 
+            raise ValueError("plot_scurve method requires exactly one sweep variable.")
+        os.makedirs(os.path.join(self.figure_path, "combined-scurves-single/"), exist_ok=True)
+        all_scurves = []
+        for i, device in enumerate(self.device_classes):
+            for j, params in enumerate(self.param_sets):
+                bitstream_averages = self.results[(i,j)]
+                var1 = getattr(params, self.sweep_variables[0])
+                all_scurves.append((var1, bitstream_averages))
+                # --- Step 2: Normalize colors by temperature ---0
+
+        title = f"S-Curves"
+        filename = f"combined_scurve.png"
+        all_temps = set([item[0] for item in all_scurves])
+        collected_data = []
+        for var1, bitstream_averages in all_scurves:
+            collected_data.append((var1, self.j_stt_arr, bitstream_averages))
+
+        if not collected_data:
+            return
+
+        plt.figure(figsize=(6, 6))
+
+        # --- Step 2: Normalize colors by temperature ---
+        norm = plt.Normalize(min(all_temps), max(all_temps))
+        cmap = plt.cm.inferno
+
+        # --- Step 3: Plot S-curves (x=J_stt, y=bitstream avg, color=T) ---
+        for (var1, J_stt, bitstr_avg) in sorted(collected_data, key=lambda x: x[0]):
+            color = cmap(norm(var1))
+            plt.plot(J_stt, bitstr_avg, "-", ".", color=color, label=f"{var1}")
+
+        # --- Step 4: Labels, colorbar, save ---
+        plt.xlabel('STT bias current (A/m²)', fontsize=14)
+        plt.ylabel('Bitstream average', fontsize=14)
+        plt.title(title, fontsize=15)
+        plt.grid(True, linestyle=':')
+        plt.tight_layout()
+
+        # Colorbar for temperature
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])
+        plt.colorbar(sm, label=f"{self.sweep_variables[0].capitalize()}")
+
+        save_path = os.path.join(self.figure_path, f"combined-scurves-single/", filename)
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.close()
 
 
     def save_parameters(self):

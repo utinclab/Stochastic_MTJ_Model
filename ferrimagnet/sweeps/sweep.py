@@ -31,6 +31,9 @@ class DeviceSweep:
             # Run and stream to disk
             bitstream_average = sim.run(state_init=initial_state, j_she=j_she, j_stt=j_stt, flips=flips, index=index, x=x, save_simulation_data=save_data)
             bitstream_averages.append(bitstream_average)
+        if save_data:
+            np.save(os.path.join(self.tmp_folder, f"bitstream_avg/bitstream_avg_{index}.npy"), bitstream_average)
+            np.save(os.path.join(self.tmp_folder, f"j_stt/j_stt_{index}.npy"), j_stt_arr)
         return {index: bitstream_averages}
 
 
