@@ -1,5 +1,6 @@
 from sweeps.sweep import DeviceSweep
-from devices.parallel_cpu import ParallelCPUDevice
+# from devices.parallel_cpu import ParallelCPUDevice
+from devices.base import DeviceBase
 from utils.utils import MaterialUtils
 from parameters.ferri_params import FerriParameters, MTJParameters
 import numpy as np
@@ -31,7 +32,7 @@ def main():
     os.makedirs(os.path.join(data_folder, "R/"), exist_ok=True)
 
     # Define the device classes and parameter sets to sweep
-    device_classes = [ParallelCPUDevice]  # Add other device classes if needed
+    device_classes = [DeviceBase]  # Add other device classes if needed
     # Sweep Alpha and Temperature
     param_sets=[]
     # for i in range(50):

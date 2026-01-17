@@ -1,6 +1,6 @@
 import os
 import pickle
-from scipy import interpolate
+# from scipy import interpolate
 import numpy as np
 
 class MaterialUtils:
@@ -33,14 +33,14 @@ class MaterialUtils:
                     print(f"[WARN] Skipping incomplete file: {path}")
         return results
     
-    @staticmethod
-    def j_stt_bitavg_lut(bitavg, bitstream_avg_path, j_stt_path):
-        bitavg_arr = np.load(bitstream_avg_path)
-        J_lut = np.load(j_stt_path)
-        if bitavg > 0.9988:
-            return -6.6e9
-        elif bitavg < 0.002:
-            return 6.6e9
-        else:
-            f = interpolate.interp1d(bitavg_arr, J_lut)
-            return f(bitavg)
+    # @staticmethod
+    # def j_stt_bitavg_lut(bitavg, bitstream_avg_path, j_stt_path):
+    #     bitavg_arr = np.load(bitstream_avg_path)
+    #     J_lut = np.load(j_stt_path)
+    #     if bitavg > 0.9988:
+    #         return -6.6e9
+    #     elif bitavg < 0.002:
+    #         return 6.6e9
+    #     else:
+    #         f = interpolate.interp1d(bitavg_arr, J_lut)
+    #         return f(bitavg)
