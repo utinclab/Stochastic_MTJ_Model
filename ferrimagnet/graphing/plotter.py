@@ -239,12 +239,12 @@ class Plotter:
 
         # --- Step 2: Normalize colors by temperature ---
         norm = plt.Normalize(min(all_temps), max(all_temps))
-        cmap = plt.cm.inferno
+        cmap = plt.cm.viridis
 
         # --- Step 3: Plot S-curves (x=J_stt, y=bitstream avg, color=T) ---
         for (var1, J_stt, bitstr_avg) in sorted(collected_data, key=lambda x: x[0]):
             color = cmap(norm(var1))
-            plt.plot(J_stt, bitstr_avg, "-", ".", color=color, label=f"{var1}")
+            plt.plot(J_stt, bitstr_avg, "-", "o", color=color, label=f"{var1}")
 
         # --- Step 4: Labels, colorbar, save ---
         plt.xlabel('STT bias current (A/m²)', fontsize=14)
